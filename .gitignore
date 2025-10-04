@@ -1,0 +1,6 @@
+amit-curl.txt
+venv/
+.env
+test.py
+open-ai-image-gen.py
+*.png

@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DigitalOcean Inference Quick Reference</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/bash.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: #f5f5f5;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header {
+            background: linear-gradient(135deg, #0080FF 0%, #0050FF 100%);
+            color: white;
+            padding: 60px 20px;
+            text-align: center;
+            margin-bottom: 40px;
+            border-radius: 10px;
+        }
+
+        h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+
+        section {
+            background: white;
+            padding: 30px;
+            margin-bottom: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        h2 {
+            color: #0080FF;
+            margin-bottom: 20px;
+            font-size: 1.8em;
+            border-bottom: 3px solid #0080FF;
+            padding-bottom: 10px;
+        }
+
+        h3 {
+            color: #333;
+            margin: 25px 0 15px;
+            font-size: 1.3em;
+        }
+
+        pre {
+            margin: 15px 0;
+            border-radius: 6px;
+            overflow-x: auto;
+        }
+
+        code {
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            font-size: 0.9em;
+        }
+
+        .tip {
+            background: #E3F2FD;
+            border-left: 4px solid #0080FF;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 4px;
+        }
+
+        .tip strong {
+            color: #0080FF;
+        }
+
+        ul {
+            margin: 15px 0;
+            padding-left: 30px;
+        }
+
+        li {
+            margin: 8px 0;
+        }
+
+        .differences {
+            background: #F5F5F5;
+            padding: 20px;
+            border-radius: 6px;
+            margin-top: 20px;
+        }
+
+        .differences ul {
+            list-style-type: none;
+            padding-left: 0;
+        }
+
+        .differences li {
+            padding: 8px 0;
+            border-bottom: 1px solid #ddd;
+        }
+
+        .differences li:last-child {
+            border-bottom: none;
+        }
+
+        footer {
+            text-align: center;
+            padding: 40px 20px;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🚀 DigitalOcean Inference Quick Reference</h1>
+            <p class="subtitle">cURL examples first, then Python (OpenAI SDK & Gradient SDK)</p>
+        </header>
+
+        <section>
+            <h2>1) cURL — Simple Chat (DigitalOcean Inference)</h2>
+            <pre><code class="language-bash"># Returns a short text completion from a chat model on DO
+curl https://inference.do-ai.run/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $DIGITAL_OCEAN_MODEL_ACCESS_KEY" \
+  -d '{
+    "model": "llama3-8b-instruct",
+    "messages": [
+      {"role": "system", "content": "You are a helpful assistant."},
+      {"role": "user", "content": "Tell me a fun fact about octopuses."}
+    ]
+  }'</code></pre>
+            <div class="tip">
+                <strong>Tip:</strong> Swap <code>llama3-8b-instruct</code> for any model you see in <code>/v1/models</code>.
+            </div>
+        </section>
+
+        <section>
+            <h2>2) cURL — Simple Image Gen (DigitalOcean Inference)</h2>
+            <pre><code class="language-bash"># Generates 1 image (1024x1024) and returns base64 JSON
+curl https://inference.do-ai.run/v1/images/generations \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $DIGITAL_OCEAN_MODEL_ACCESS_KEY" \
+  -d '{
+    "model": "openai-gpt-image-1",
+    "prompt": "A cute baby sea otter",
+    "n": 1,
+    "size": "1024x1024"
+  }'</code></pre>
+
+            <h3>Optional: Save directly to a PNG (requires jq + base64)</h3>
+            <pre><code class="language-bash">curl https://inference.do-ai.run/v1/images/generations \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $DIGITAL_OCEAN_MODEL_ACCESS_KEY" \
+  -d '{
+    "model": "openai-gpt-image-1",
+    "prompt": "A cute baby sea otter",
+    "n": 1,
+    "size": "1024x1024"
+  }' | jq -r '.data[0].b64_json' | base64 --decode > sea_otter.png</code></pre>
+        </section>
+
+        <section>
+            <h2>Python Examples</h2>
+
+            <h3>A) OpenAI SDK (pointing at DigitalOcean Inference)</h3>
+
+            <h4>List Models</h4>
+            <pre><code class="language-python">from openai import OpenAI
+from dotenv import load_dotenv
+import os
+
+load_dotenv()
+
+client = OpenAI(
+    base_url="https://inference.do-ai.run/v1/",
+    api_key=os.getenv("DIGITAL_OCEAN_MODEL_ACCESS_KEY"),
+)
+
+models = client.models.list()
+print("Available models:")
+for m in models.data:
+    print("-", m.id)</code></pre>
+
+            <h4>Simple Chat</h4>
+            <pre><code class="language-python">from openai import OpenAI
+from dotenv import load_dotenv
+import os
+
+load_dotenv()
+
+client = OpenAI(
+    base_url="https://inference.do-ai.run/v1/",
+    api_key=os.getenv("DIGITAL_OCEAN_MODEL_ACCESS_KEY"),
+)
+
+resp = client.chat.completions.create(
+    model="llama3-8b-instruct",
+    messages=[
+        {"role": "system", "content": "You are a helpful assistant."},
+        {"role": "user", "content": "Tell me a fun fact about octopuses."}
+    ],
+)
+print(resp.choices[0].message.content)</code></pre>
+
+            <h4>Image Generation</h4>
+            <pre><code class="language-python">from openai import OpenAI
+from dotenv import load_dotenv
+import os, base64
+
+load_dotenv()
+
+client = OpenAI(
+    base_url="https://inference.do-ai.run/v1/",
+    api_key=os.getenv("DIGITAL_OCEAN_MODEL_ACCESS_KEY"),
+)
+
+result = client.images.generate(
+    model="openai-gpt-image-1",
+    prompt="A cute baby sea otter, children's book drawing style",
+    size="1024x1024",
+    n=1,
+)
+
+b64 = result.data[0].b64_json
+with open("sea_otter.png", "wb") as f:
+    f.write(base64.b64decode(b64))
+
+print("Saved sea_otter.png")</code></pre>
+        </section>
+
+        <section>
+            <h3>B) Gradient SDK (native DigitalOcean client)</h3>
+
+            <h4>Simple Chat</h4>
+            <pre><code class="language-python">from gradient import Gradient
+from dotenv import load_dotenv
+import os
+
+load_dotenv()
+
+client = Gradient(model_access_key=os.getenv("DIGITAL_OCEAN_MODEL_ACCESS_KEY"))
+
+resp = client.chat.completions.create(
+    model="llama3-8b-instruct",
+    messages=[
+        {"role": "system", "content": "You are a helpful assistant."},
+        {"role": "user", "content": "Tell me a fun fact about octopuses."}
+    ],
+)
+
+print(resp.choices[0].message.content)</code></pre>
+
+            <h4>Image Generation</h4>
+            <pre><code class="language-python">from gradient import Gradient
+from dotenv import load_dotenv
+import os, base64
+
+load_dotenv()
+
+client = Gradient(model_access_key=os.getenv("DIGITAL_OCEAN_MODEL_ACCESS_KEY"))
+
+result = client.images.generations.create(
+    model="openai-gpt-image-1",
+    prompt="A cute baby sea otter, children's book drawing style",
+    size="1024x1024",
+    n=1,
+)
+
+b64 = result.data[0].b64_json
+with open("sea_otter.png", "wb") as f:
+    f.write(base64.b64decode(b64))
+
+print("Saved sea_otter.png")</code></pre>
+        </section>
+
+        <section>
+            <h2>Handy Differences (at a glance)</h2>
+            <div class="differences">
+                <ul>
+                    <li><strong>Auth env var:</strong> <code>DIGITAL_OCEAN_MODEL_ACCESS_KEY</code></li>
+                    <li><strong>DO endpoint (OpenAI SDK):</strong> <code>base_url="https://inference.do-ai.run/v1/"</code></li>
+                    <li><strong>Image model IDs:</strong>
+                        <ul>
+                            <li>OpenAI: <code>gpt-image-1</code></li>
+                            <li>DigitalOcean: <code>openai-gpt-image-1</code></li>
+                        </ul>
+                    </li>
+                    <li><strong>Images on DO:</strong> include <code>n</code> and <code>size</code> explicitly</li>
+                </ul>
+            </div>
+        </section>
+
+        <footer>
+            <p>Made with ❤️ for DigitalOcean AI Hackathon</p>
+        </footer>
+    </div>
+
+    <script>
+        hljs.highlightAll();
+    </script>
+</body>
+</html>
